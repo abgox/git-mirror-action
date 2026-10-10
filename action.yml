@@ -1,0 +1,56 @@
+name: "Git Mirror Action"
+description: "Mirror a single repo to N destinations over SSH. Pure PowerShell, no API calls."
+author: "abgox"
+branding:
+  icon: "repeat"
+  color: "gray-dark"
+
+inputs:
+  src_url:
+    description: "Source SSH URL, e.g. git@github.com:owner/repo.git."
+    required: true
+  dst_url:
+    description: "Destination SSH URL(s). Separate multiple with commas, semicolons or newlines."
+    required: true
+  src_ssh_key:
+    description: "Private SSH key with read access to source. Falls back to the dst key if omitted."
+    required: false
+    default: ""
+  dst_ssh_key:
+    description: "Private SSH key with write access to destinations. Falls back to the src key if omitted, or accept one key per destination to pair with dst_url."
+    required: false
+    default: ""
+  branches:
+    description: "Branches to mirror. Empty for the source's default branch, \"*\" for every branch, or list names like \"main, dev\"."
+    required: false
+    default: ""
+  tags:
+    description: "Also mirror tags. On by default."
+    required: false
+    default: "true"
+  force:
+    description: "Force push so the destination matches the source. On by default; set false to fail instead of overwriting."
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Git Mirror
+      shell: pwsh
+      env:
+        GM_SRC_URL: ${{ inputs.src_url }}
+        GM_DST_URL: ${{ inputs.dst_url }}
+        GM_SRC_SSH_KEY: ${{ inputs.src_ssh_key }}
+        GM_DST_SSH_KEY: ${{ inputs.dst_ssh_key }}
+      run: |
+        # Values are handed over via the environment: secrets and multi-line
+        # inputs cannot be interpolated safely onto the command line.
+        & "${{ github.action_path }}/main.ps1" `
+          -SrcUrl $env:GM_SRC_URL `
+          -DstUrl $env:GM_DST_URL `
+          -SrcSshKey $env:GM_SRC_SSH_KEY `
+          -DstSshKey $env:GM_DST_SSH_KEY `
+          -Branches "${{ inputs.branches }}" `
+          -Tags "${{ inputs.tags }}" `
+          -Force "${{ inputs.force }}"
